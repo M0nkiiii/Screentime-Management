@@ -7,11 +7,15 @@ const usageRoutes = require('./routes/usageRoutes');
 const goalRoutes = require('./routes/goalRoutes'); // Adjust the path if necessary
 const taskRoutes = require('./routes/taskRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const path = require('path');
 
 dotenv.config(); // Load environment variables
 
 const app = express();
+
+// Import associations to initialize model relationships
+require('./models/associations');
 
 // Enable CORS for all origins
 app.use(cors());
@@ -27,6 +31,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/usage', usageRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/api/admin', adminRoutes);
 
 // Port Configuration
 const PORT = process.env.PORT || 5000;

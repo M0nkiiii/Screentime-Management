@@ -17,6 +17,10 @@ const Goal = sequelize.define('Goal', {
         type: DataTypes.DATE,
         allowNull: false,
     },
+    completed: { // New field
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+    },
 }, {
     timestamps: true,
 });

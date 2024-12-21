@@ -164,11 +164,72 @@ const updateUserInfo = async (req, res) => {
   }
 };
 
+const checkEmail = async (req, res) => {
+  const { email } = req.body;
+
+  console.log('Checking email:', email);
+
+  if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+  }
+
+  try {
+      const user = await User.findOne({ where: { email } });
+
+      if (!user) {
+          return res.status(404).json({ error: 'Email not found' });
+      }
+
+      return res.status(200).json({ exists: true });
+  } catch (error) {
+      console.error('Error checking email:', error.message);
+      return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  const { email, newPassword } = req.body;
+
+  console.log('Resetting password for email:', email);
+
+  if (!email || !newPassword) {
+      return res.status(400).json({ error: 'Email and new password are required' });
+  }
+
+  try {
+      const user = await User.findOne({ where: { email } });
+
+      if (!user) {
+          console.error('User not found for email:', email);
+          return res.status(404).json({ error: 'Email not found' });
+      }
+
+      console.log('User found:', user);
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      console.log('New hashed password:', hashedPassword);
+
+      user.password = hashedPassword;
+      await user.save();
+
+      console.log('Password updated successfully for user:', user.email);
+
+      return res.status(200).json({ message: 'Password reset successful' });
+  } catch (error) {
+      console.error('Error resetting password:', error.message);
+      return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+
+
+
 module.exports = {
   registerUser,
   loginUser,
   getUserDetails,
   getUserInfo,
   updateUserInfo,
-
+  resetPassword,
+  checkEmail
 };
