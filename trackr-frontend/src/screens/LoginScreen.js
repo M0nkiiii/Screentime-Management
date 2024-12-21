@@ -22,17 +22,16 @@ export default function LoginScreen({ navigation }) {
     };
 
     const handleLogin = async () => {
-        // Check for valid email format
         if (!validateEmail(email)) {
             window.alert('Invalid Email: Please enter a valid email address.');
             return;
         }
-
+    
         if (!password) {
             window.alert('Password is required.');
             return;
         }
-
+    
         try {
             const response = await fetch('http://localhost:5000/api/auth/login', {
                 method: 'POST',
@@ -41,16 +40,26 @@ export default function LoginScreen({ navigation }) {
                 },
                 body: JSON.stringify({ email, password }),
             });
-
+    
             const data = await response.json();
-
+    
             if (response.ok) {
                 console.log('Login successful:', data);
-
-                // Save token and userId to AsyncStorage
+    
+                // Save token and userId to AsyncStorage (for app)
                 await AsyncStorage.setItem('token', data.token);
                 await AsyncStorage.setItem('userId', data.userId.toString());
-
+    
+                // Log the token to verify it's correct before saving it to chrome.storage.local
+                console.log('Saving token to chrome.storage.local:', data.token);
+    
+                // Save the token in chrome.storage.local for the extension to access
+                if (chrome && chrome.storage) {
+                    chrome.storage.local.set({ authToken: data.token }, () => {
+                        console.log('Token saved to chrome.storage.local:', data.token);
+                    });
+                }
+    
                 // Call login context function and navigate to Main
                 login(data.token);
                 navigation.replace('Main'); // Navigate to the main screen
@@ -63,7 +72,10 @@ export default function LoginScreen({ navigation }) {
             window.alert('Error: Failed to connect to the server!');
         }
     };
-
+    
+    
+    
+    
     return (
         <View style={styles.container}>
             {/* Logo Section */}
@@ -75,8 +87,8 @@ export default function LoginScreen({ navigation }) {
                 <Text style={styles.title}>Login</Text> {/* Login Title */}
             </View>
 
-            {/* Input Fields */}
-            <View style={styles.inputContainer}>
+              {/* Input Fields */}
+              <View style={styles.inputContainer}>
                 <TextInput
                     style={styles.input}
                     placeholder="Email"
@@ -107,6 +119,19 @@ export default function LoginScreen({ navigation }) {
             >
                 <Text style={styles.registerText}>Create New Account</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+                onPress={() => navigation.navigate('ForgotPassword', {isAdmin:false})}
+                style={styles.forgotPasswordButton}
+            >
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
+
+            {/* Admin Access Button */}
+            <View style={styles.adminAccessContainer}>
+                <TouchableOpacity onPress={() => navigation.navigate('AdminLogin')}>
+                    <Text style={styles.adminAccessText}>Admin Login/Register</Text>
+                </TouchableOpacity>
+            </View>
         </View>
     );
 }
@@ -130,8 +155,8 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#007BFF', // Blue color for the title
-        marginTop: 10, // Spacing below the logo
+        color: '#007BFF',
+        marginTop: 10,
     },
     inputContainer: {
         width: '100%',
@@ -172,5 +197,24 @@ const styles = StyleSheet.create({
         color: '#007BFF',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    forgotPasswordButton: {
+        marginTop: 10,
+        alignSelf: 'center',
+    },
+    forgotPasswordText: {
+        color: '#007BFF',
+        fontSize: 14,
+    },
+    adminAccessContainer: {
+        position: 'absolute',
+        bottom: 20, // Position at the bottom of the screen
+        alignSelf: 'center',
+    },
+    adminAccessText: {
+        fontSize: 16,
+        color: '#007BFF',
+        fontWeight: 'bold',
+        textAlign: 'center',
     },
 });

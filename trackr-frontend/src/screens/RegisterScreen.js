@@ -67,6 +67,11 @@ export default function RegisterScreen({ navigation }) {
     }
   };
 
+  const validatePasswordStrength = (password) => {
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    return strongPasswordRegex.test(password);
+    };
+
   const handleRegister = async () => {
     // Validate email and phone number
     if (!validateEmail(email)) {
@@ -74,6 +79,11 @@ export default function RegisterScreen({ navigation }) {
         window.alert('Invalid Email: Please enter a valid email address.');
         return;
     }
+
+    if (!validatePasswordStrength(password)) {
+      alert('Password must be at least 8 characters long, include uppercase, lowercase, a number, and a special character.');
+      return;
+  }
 
     if (!validatePhoneNumber(phoneNumber)) {
         console.log('Invalid phone number:', phoneNumber);

@@ -21,7 +21,9 @@ const NewGoalScreen = () => {
     const [targetTime, setTargetTime] = useState(new Date());
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
+    const [goalActionModalVisible, setGoalActionModalVisible] = useState(false);
     const [goals, setGoals] = useState([]);
+    const [selectedGoal, setSelectedGoal] = useState(null);
 
     const addGoal = async () => {
         try {
@@ -89,8 +91,53 @@ const NewGoalScreen = () => {
         }
     };
 
-    const handleDateChange = (date) => {
-        setTargetTime(date);
+    const markGoalAsCompleted = async (goalId) => {
+        try {
+            const token = await AsyncStorage.getItem('token');
+            const response = await fetch(`http://localhost:5000/api/goals/mark-completed/${goalId}`, {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to mark goal as completed');
+            }
+
+            Alert.alert('Success', 'Goal marked as completed!');
+            setGoalActionModalVisible(false);
+            fetchGoals(); // Refresh goals
+        } catch (error) {
+            console.error('Error marking goal as completed:', error.message);
+            Alert.alert('Error', 'Failed to mark goal as completed. Please try again.');
+        }
+    };
+
+    const extendGoalDeadline = async (goalId, newTargetTime) => {
+        try {
+            const token = await AsyncStorage.getItem('token');
+            const response = await fetch(`http://localhost:5000/api/goals/extend/${goalId}`, {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ targetTime: newTargetTime }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to extend goal deadline');
+            }
+
+            Alert.alert('Success', 'Goal deadline extended successfully!');
+            setGoalActionModalVisible(false);
+            fetchGoals(); // Refresh goals after extending
+        } catch (error) {
+            console.error('Error extending goal deadline:', error.message);
+            Alert.alert('Error', 'Failed to extend goal deadline. Please try again.');
+        }
     };
 
     useEffect(() => {
@@ -108,16 +155,25 @@ const NewGoalScreen = () => {
                 data={goals}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
-                    <View style={styles.goalCard}>
-                        <Text style={styles.goalName}>{item.goalName}</Text>
+                    <TouchableOpacity
+                        style={[styles.goalCard, item.completed && styles.goalCardCompleted]}
+                        onPress={() => {
+                            setSelectedGoal(item);
+                            setGoalActionModalVisible(true);
+                        }}
+                    >
+                        <Text style={styles.goalName}>
+                            {item.goalName} {item.completed && '✔️'}
+                        </Text>
                         <Text style={styles.goalDescription}>{item.description}</Text>
                         <Text style={styles.goalTime}>
                             Target: {new Date(item.targetTime).toLocaleString()}
                         </Text>
-                    </View>
+                    </TouchableOpacity>
                 )}
             />
 
+            {/* Add Goal Modal */}
             <Modal visible={modalVisible} animationType="slide" transparent={true}>
                 <View style={styles.modalContainer}>
                     <View style={styles.modalContent}>
@@ -134,38 +190,21 @@ const NewGoalScreen = () => {
                             value={description}
                             onChangeText={setDescription}
                         />
-
                         {Platform.OS === 'web' ? (
                             <DatePicker
                                 selected={targetTime}
-                                onChange={handleDateChange}
+                                onChange={(date) => setTargetTime(date)}
                                 showTimeSelect
                                 dateFormat="Pp"
                             />
                         ) : (
-                            <>
-                                <TouchableOpacity
-                                    style={styles.dateButton}
-                                    onPress={() => setShowDatePicker(true)}
-                                >
-                                    <Text style={styles.dateButtonText}>
-                                        Set Target Time: {targetTime.toLocaleString()}
-                                    </Text>
-                                </TouchableOpacity>
-                                {showDatePicker && (
-                                    <DateTimePicker
-                                        value={targetTime}
-                                        mode="datetime"
-                                        display="default"
-                                        onChange={(event, date) => {
-                                            setShowDatePicker(false);
-                                            if (date) setTargetTime(date);
-                                        }}
-                                    />
-                                )}
-                            </>
+                            <DateTimePicker
+                                value={targetTime}
+                                mode="datetime"
+                                display="default"
+                                onChange={(event, date) => setTargetTime(date || targetTime)}
+                            />
                         )}
-
                         <TouchableOpacity style={styles.saveButton} onPress={addGoal}>
                             <Text style={styles.saveButtonText}>Save Goal</Text>
                         </TouchableOpacity>
@@ -177,6 +216,65 @@ const NewGoalScreen = () => {
                         </TouchableOpacity>
                     </View>
                 </View>
+            </Modal>
+
+            {/* Goal Action Modal */}
+            <Modal visible={goalActionModalVisible} animationType="slide" transparent={true}>
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>{selectedGoal?.goalName}</Text>
+                        <Text style={styles.goalDescription}>{selectedGoal?.description}</Text>
+                        {!selectedGoal?.completed && (
+                            <TouchableOpacity
+                                style={styles.saveButton}
+                                onPress={() => markGoalAsCompleted(selectedGoal.id)}
+                            >
+                                <Text style={styles.saveButtonText}>Mark as Achieved</Text>
+                            </TouchableOpacity>
+                        )}
+                        <TouchableOpacity
+                            style={styles.saveButton}
+                            onPress={() => setShowDatePicker(true)}
+                        >
+                            <Text style={styles.saveButtonText}>Extend Deadline</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.cancelButton}
+                            onPress={() => setGoalActionModalVisible(false)}
+                        >
+                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Extend Date Picker */}
+                {showDatePicker && (
+                    <Modal transparent={true} animationType="fade">
+                        <View style={styles.modalContainer}>
+                            {Platform.OS === 'web' ? (
+                                <DatePicker
+                                    selected={new Date()}
+                                    onChange={(date) => {
+                                        setShowDatePicker(false);
+                                        extendGoalDeadline(selectedGoal.id, date);
+                                    }}
+                                    showTimeSelect
+                                    dateFormat="Pp"
+                                />
+                            ) : (
+                                <DateTimePicker
+                                    value={new Date()}
+                                    mode="datetime"
+                                    display="default"
+                                    onChange={(event, date) => {
+                                        setShowDatePicker(false);
+                                        if (date) extendGoalDeadline(selectedGoal.id, date);
+                                    }}
+                                />
+                            )}
+                        </View>
+                    </Modal>
+                )}
             </Modal>
         </View>
     );
@@ -216,6 +314,10 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 5,
         elevation: 5,
+    },
+    goalCardCompleted: {
+        backgroundColor: '#d4edda',
+        borderColor: '#c3e6cb',
     },
     goalName: {
         fontSize: 18,

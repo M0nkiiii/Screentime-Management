@@ -23,6 +23,8 @@ const CalendarScreen = () => {
     const [tasks, setTasks] = useState([]);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
+    const [taskActionModalVisible, setTaskActionModalVisible] = useState(false);
+    const [selectedTask, setSelectedTask] = useState(null);
 
     const addTask = async () => {
         try {
@@ -43,19 +45,6 @@ const CalendarScreen = () => {
             if (!response.ok) {
                 throw new Error('Failed to add task');
             }
-
-            // Create notification for the task
-            await fetch('http://localhost:5000/api/notifications/add', {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    title: 'New Task Added',
-                    description: `Task: ${taskName}`,
-                }),
-            });
 
             Alert.alert('Success', 'Task added successfully!');
             setModalVisible(false);
@@ -87,6 +76,30 @@ const CalendarScreen = () => {
             setTasks(data);
         } catch (error) {
             console.error('Error fetching tasks:', error.message);
+        }
+    };
+
+    const markTaskAsCompleted = async (taskId) => {
+        try {
+            const token = await AsyncStorage.getItem('token');
+            const response = await fetch(`http://localhost:5000/api/tasks/mark-completed/${taskId}`, {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to mark task as completed');
+            }
+
+            Alert.alert('Success', 'Task marked as completed!');
+            setTaskActionModalVisible(false);
+            fetchTasks(); // Refresh tasks after marking as completed
+        } catch (error) {
+            console.error('Error marking task as completed:', error.message);
+            Alert.alert('Error', 'Failed to mark task as completed. Please try again.');
         }
     };
 
@@ -125,13 +138,22 @@ const CalendarScreen = () => {
                 )}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
-                    <View style={styles.taskCard}>
-                        <Text style={styles.taskName}>{item.taskName}</Text>
+                    <TouchableOpacity
+                        style={[styles.taskCard, item.completed && styles.taskCardCompleted]}
+                        onPress={() => {
+                            setSelectedTask(item);
+                            setTaskActionModalVisible(true);
+                        }}
+                    >
+                        <Text style={styles.taskName}>
+                            {item.taskName} {item.completed && '✔️'}
+                        </Text>
                         <Text style={styles.taskDescription}>{item.description}</Text>
-                    </View>
+                    </TouchableOpacity>
                 )}
             />
 
+            {/* Add Task Modal */}
             <Modal visible={modalVisible} animationType="slide" transparent={true}>
                 <View style={styles.modalContainer}>
                     <View style={styles.modalContent}>
@@ -192,6 +214,32 @@ const CalendarScreen = () => {
                     </View>
                 </View>
             </Modal>
+
+            {/* Task Action Modal */}
+            <Modal visible={taskActionModalVisible} animationType="slide" transparent={true}>
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>
+                            {selectedTask?.taskName} {selectedTask?.completed && '✔️'}
+                        </Text>
+                        <Text style={styles.taskDescription}>{selectedTask?.description}</Text>
+                        {!selectedTask?.completed && (
+                            <TouchableOpacity
+                                style={styles.saveButton}
+                                onPress={() => markTaskAsCompleted(selectedTask.id)}
+                            >
+                                <Text style={styles.saveButtonText}>Mark as Done</Text>
+                            </TouchableOpacity>
+                        )}
+                        <TouchableOpacity
+                            style={styles.cancelButton}
+                            onPress={() => setTaskActionModalVisible(false)}
+                        >
+                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -230,6 +278,10 @@ const styles = StyleSheet.create({
         marginBottom: 10,
         borderColor: '#ddd',
         borderWidth: 1,
+    },
+    taskCardCompleted: {
+        backgroundColor: '#d4edda',
+        borderColor: '#c3e6cb',
     },
     taskName: {
         fontSize: 16,

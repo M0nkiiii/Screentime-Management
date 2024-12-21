@@ -1,8 +1,8 @@
-import React, { useContext } from 'react'; // Fix: Added `useContext`
+import React, { useContext } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import { AuthContext } from '../../App'; // Ensure AuthContext is imported
+import { AuthContext } from '../../App'; // Import AuthContext from App.js
 import { Text } from 'react-native';
 
 // Import Screens
@@ -14,8 +14,12 @@ import SettingsScreen from '../screens/SettingsScreen';
 import NewGoalScreen from '../screens/NewGoalScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import AdminLoginScreen from '../screens/AdminLoginScreen';
+import AdminRegisterScreen from '../screens/AdminRegisterScreen';
+import AdminDashboardScreen from '../screens/AdminDashboardScreen';
 
-//Setting Screen
+// Settings Section Screens
 import AccountScreen from '../screens/AccountScreen';
 import PrivacyAndSecurityScreen from '../screens/PrivacyAndSecurityScreen';
 import HelpAndSupportScreen from '../screens/HelpAndSupportScreen';
@@ -41,9 +45,8 @@ function TabNavigator() {
                 },
                 tabBarActiveTintColor: 'blue',
                 tabBarInactiveTintColor: 'gray',
-            })}
-        >
-             <Tab.Screen
+            })}>
+            <Tab.Screen
                 name="Dashboard"
                 component={DashboardScreen}
                 options={{ headerShown: false }}
@@ -72,34 +75,69 @@ function TabNavigator() {
     );
 }
 
-// Stack Navigator for Settings Section
 function SettingsStack() {
     return (
         <Stack.Navigator>
-            <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="Account" component={AccountScreen} options={{ title: 'Account' }} />
-            <Stack.Screen name="PrivacyAndSecurity" component={PrivacyAndSecurityScreen} options={{ title: 'Privacy and Security' }} />
-            <Stack.Screen name="HelpAndSupport" component={HelpAndSupportScreen} options={{ title: 'Help and Support' }} />
-            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ title: 'Privacy Policy' }} />
-            <Stack.Screen name="About" component={AboutScreen} options={{ title: 'About' }} />
+            <Stack.Screen
+                name="Settings"
+                component={SettingsScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="Account"
+                component={AccountScreen}
+                options={{ title: 'Account' }}
+            />
+            <Stack.Screen
+                name="PrivacyAndSecurity"
+                component={PrivacyAndSecurityScreen}
+                options={{ title: 'Privacy and Security' }}
+            />
+            <Stack.Screen
+                name="HelpAndSupport"
+                component={HelpAndSupportScreen}
+                options={{ title: 'Help and Support' }}
+            />
+            <Stack.Screen
+                name="PrivacyPolicy"
+                component={PrivacyPolicyScreen}
+                options={{ title: 'Privacy Policy' }}
+            />
+            <Stack.Screen
+                name="About"
+                component={AboutScreen}
+                options={{ title: 'About' }}
+            />
         </Stack.Navigator>
     );
 }
 
 export default function Navigation() {
-    const { isAuthenticated } = useContext(AuthContext); // Fix: Ensure `useContext` works
+    const { isAuthenticated, isAdminAuthenticated } = useContext(AuthContext);
 
     return (
         <NavigationContainer>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
-                {!isAuthenticated ? (
+                {!isAuthenticated && !isAdminAuthenticated ? (
                     <>
+                        {/* Unauthenticated Routes */}
                         <Stack.Screen name="Home" component={HomeScreen} />
                         <Stack.Screen name="Login" component={LoginScreen} />
                         <Stack.Screen name="Register" component={RegisterScreen} />
+                        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+                        <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
+                        <Stack.Screen name="AdminRegister" component={AdminRegisterScreen} />
+                    </>
+                ) : isAdminAuthenticated ? (
+                    <>
+                        {/* Admin-Specific Routes */}
+                        <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
                     </>
                 ) : (
-                    <Stack.Screen name="Main" component={TabNavigator} />
+                    <>
+                        {/* Regular User Routes */}
+                        <Stack.Screen name="Main" component={TabNavigator} />
+                    </>
                 )}
             </Stack.Navigator>
         </NavigationContainer>
